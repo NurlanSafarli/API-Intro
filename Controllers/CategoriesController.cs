@@ -1,5 +1,5 @@
-﻿using ApiAB202.DAL;
-using ApiAB202.Entities;
+﻿
+using ApiAB202.Repositories.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,29 +11,36 @@ namespace ApiAB202.Controllers
     public class CategoriesController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IRepository _repository;
+ 
 
-        public CategoriesController(AppDbContext context)
+        public CategoriesController(AppDbContext context, IRepository repository)
         {
+            _repository = repository;
             _context = context;
         }
         [HttpGet]
         public async Task<IActionResult> Get(int page = 1, int take=3)
         {
-            List<Category> categories = await _context.Categories.Skip((page-1)*take).Take(take).ToListAsync();
-            return Ok(categories);
+            
+            return Ok(await _repository.GetAllAsync());
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
         {
             if (id <= 0) return StatusCode(StatusCodes.Status400BadRequest);
-          Category existed = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id);
+          Category existed = await _context.Categories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
             if (existed == null) return NotFound();
             return Ok(existed);
         }
         [HttpPost]
-        public async Task<IActionResult> Create(Category category)
+        public async Task<IActionResult> Create([FromForm]CreateCategoryDto categorydto)
         {
+            Category category = new Category
+            {
+                Name = categorydto.Name,
+            };
             await _context.Categories.AddAsync(category);
             return StatusCode(StatusCodes.Status201Created, category);
         }
@@ -42,20 +49,21 @@ namespace ApiAB202.Controllers
         public async Task<IActionResult> Update(int id,string name)
         {
             if (id <= 0) return StatusCode(StatusCodes.Status400BadRequest);
-            Category existed = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id);
+            Category existed = await _repository.GetByIdAsync(id);
             if (existed == null) return NotFound();
             existed.Name = name;
-            await _context.SaveChangesAsync();
+            _repository.Update(existed);
+            await _repository.SaveChangesAsync();
             return NoContent();
         }
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             if (id <= 0) return StatusCode(StatusCodes.Status400BadRequest);
-            Category existed = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id);
+            Category existed = await _repository.GetByIdAsync(id);
             if (existed == null) return NotFound();
-            _context.Categories.Remove(existed);
-            await _context.SaveChangesAsync();
+           _repository.Delete(existed);
+            await _repository.SaveChangesAsync();
             return NoContent();
 
         }
