@@ -1,8 +1,10 @@
-﻿namespace ApiAB202.Entities
+﻿using ApiAB202.Entities.Base;
+
+namespace ApiAB202.Entities
 {
-	public class Category
+	public class Category : BaseEntity
 	{
-		public int Id { get; set; }
-		public string Name { get; set; }
+		
+		public string Name { get; set; }= null!; 
 	}
 }
